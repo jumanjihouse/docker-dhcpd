@@ -1,0 +1,19 @@
+#!/bin/sh
+set -e
+set -x
+
+echo '===> Default command'
+docker run -it dhcpd | tee /tmp/dhcpd.out
+echo
+grep 'Config file: /etc/dhcp/dhcpd.conf.example' /tmp/dhcpd.out
+echo
+grep 'Database file: /var/lib/dhcp/dhcpd.leases' /tmp/dhcpd.out
+echo
+
+echo '===> Show help (override default command)'
+docker run -it dhcpd --help | grep '^Usage: dhcpd'
+echo
+
+# If we make it this far, all previous commands passed.
+echo
+echo OK
