@@ -42,7 +42,7 @@ echo
 
 echo '===> Test that dhcpd starts'
 #docker run $ports --volumes-from fixtures.data --name dhcpd -d dhcpd -4 -f -d -cf /etc/dhcp/dhcpd.conf
-docker run --net host --volumes-from fixtures.data --name dhcpd -d dhcpd -4 -f -d -cf /etc/dhcp/dhcpd.conf
+docker run --volumes-from fixtures.data --name dhcpd -d dhcpd -4 -f -d -cf /etc/dhcp/dhcpd.conf
 echo
 sleep 5
 docker logs dhcpd 2>&1 | grep -q 'Server starting service.' && echo yes
@@ -60,7 +60,7 @@ echo
 #   DHCPOFFER on 172.17.0.1 to 01:de:ad:be:ef:01 via eth0
 mac="01:de:ad:be:ef:01"
 #docker run --rm -it check_dhcp -s $ip -m $mac -v || :
-docker run --net host --rm -it check_dhcp -s $ip -m $mac -v 2>&1 | tee /tmp/check.out
+docker run --rm -it check_dhcp -s $ip -m $mac -v 2>&1 | tee /tmp/check.out
 cat /tmp/check.out
 echo
 grep 'OK: Received 1 DHCPOFFER' /tmp/check.out
@@ -74,7 +74,7 @@ echo
 #   CRITICAL: No DHCPOFFERs were received.
 #   DHCPDISCOVER from 01:de:ad:be:ef:02 via eth0: network 172.17.0.0/16: no free leases
 mac="01:de:ad:be:ef:02"
-docker run --net host --rm -it check_dhcp -s $ip -m $mac -v 2>&1 | tee /tmp/check.out
+docker run --rm -it check_dhcp -s $ip -m $mac -v 2>&1 | tee /tmp/check.out
 cat /tmp/check.out
 echo
 grep 'OK: Received 1 DHCPOFFER' /tmp/check.out
