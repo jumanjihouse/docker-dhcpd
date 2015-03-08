@@ -1,3 +1,10 @@
 #!/bin/sh
+set -e
+set -x
 
-docker build -t dhcpd src/
+images="
+  dhcpd
+"
+for img in $images; do
+  docker build -t $img $img/
+done
