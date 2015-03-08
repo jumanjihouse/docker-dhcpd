@@ -1,0 +1,18 @@
+box: wercker-labs/docker
+build:
+  steps:
+    - script:
+        name: install docker
+        code: curl -sSL https://get.docker.com/ubuntu/ | sudo sh
+    - script:
+        name: print system-wide docker info
+        code: |
+          docker version
+          docker info
+          docker images
+    - script:
+        name: build all images
+        code: script/build
+    - script:
+        name: test all images
+        code: script/test

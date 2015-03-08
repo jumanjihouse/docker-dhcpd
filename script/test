@@ -2,6 +2,24 @@
 set -e
 set -x
 
+{
+docker rm -f dhcpd
+docker rm -f fixtures.data
+} &> /dev/null || :
+
+ports="
+-p 67:67/tcp
+-p 67:67/udp
+-p 546:546/tcp
+-p 546:546/udp
+-p 547:547/tcp
+-p 547:547/udp
+-p 647:647/tcp
+-p 647:647/udp
+-p 847:847/tcp
+-p 847:847/udp
+"
+
 echo '===> Default command'
 docker run -it dhcpd | tee /tmp/dhcpd.out
 echo
@@ -12,6 +30,57 @@ echo
 
 echo '===> Show help (override default command)'
 docker run -it dhcpd --help | grep '^Usage: dhcpd'
+echo
+
+echo '===> Ensure the check_dhcp image works'
+docker run -it check_dhcp --help | grep '^Options:'
+echo
+
+echo '===> Create data container for dhcpd.conf'
+docker run --name fixtures.data fixtures true
+echo
+
+echo '===> Test that dhcpd starts'
+#docker run $ports --volumes-from fixtures.data --name dhcpd -d dhcpd -4 -f -d -cf /etc/dhcp/dhcpd.conf
+docker run --net host --volumes-from fixtures.data --name dhcpd -d dhcpd -4 -f -d -cf /etc/dhcp/dhcpd.conf
+echo
+sleep 5
+docker logs dhcpd 2>&1 | grep -q 'Server starting service.' && echo yes
+echo
+
+ip=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' dhcpd)
+#[[ -n $ip ]] || ip=$(ip -4 addr show dev eth0 | grep -v 169 | awk '/inet/ {print $2}' | cut -d/ -f1)
+ip=${ip:-192.168.254.162}
+echo dhcpd ip is $ip
+echo
+
+# This should pass with output similar to...
+#   OK: Received 1 DHCPOFFER(s), 1 of 1 requested servers responded, max lease time = 21600 sec.
+#   DHCPDISCOVER from 01:de:ad:be:ef:01 via eth0
+#   DHCPOFFER on 172.17.0.1 to 01:de:ad:be:ef:01 via eth0
+mac="01:de:ad:be:ef:01"
+#docker run --rm -it check_dhcp -s $ip -m $mac -v || :
+docker run --net host --rm -it check_dhcp -s $ip -m $mac -v 2>&1 | tee /tmp/check.out
+cat /tmp/check.out
+echo
+grep 'OK: Received 1 DHCPOFFER' /tmp/check.out
+echo
+docker logs dhcpd
+echo
+#docker logs dhcpd 2>&1 | grep $mac
+echo
+
+# This should fail with output similar to...
+#   CRITICAL: No DHCPOFFERs were received.
+#   DHCPDISCOVER from 01:de:ad:be:ef:02 via eth0: network 172.17.0.0/16: no free leases
+mac="01:de:ad:be:ef:02"
+docker run --net host --rm -it check_dhcp -s $ip -m $mac -v 2>&1 | tee /tmp/check.out
+cat /tmp/check.out
+echo
+grep 'OK: Received 1 DHCPOFFER' /tmp/check.out
+echo
+docker logs dhcpd
+#docker logs dhcpd 2>&1 | grep $mac
 echo
 
 # If we make it this far, all previous commands passed.

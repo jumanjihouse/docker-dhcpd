@@ -1,3 +1,13 @@
 #!/bin/sh
 
-docker rmi dhcpd
+# Do not run on CircleCI.
+[ -n ${CI} ] && exit 0
+
+# Remove containers.
+docker rm -f dhcpd
+docker rm -f fixtures.data
+
+# Remove images.
+docker rmi -f check_dhcp
+docker rmi -f dhcpd
+docker rmi -f fixtures
