@@ -1,17 +1,56 @@
 #!/bin/sh
 set -e
-set -x
+
+{
+  docker rm -f dhcpd-config.data
+  docker rm -f dhcpd-leases.data
+} &> /dev/null || :
 
 echo '===> Default command'
 docker run -it dhcpd | tee /tmp/dhcpd.out
 echo
-grep 'Config file: /etc/dhcp/dhcpd.conf.example' /tmp/dhcpd.out
+grep 'Config file: /etc/dhcp/dhcpd.conf' /tmp/dhcpd.out
 echo
 grep 'Database file: /var/lib/dhcp/dhcpd.leases' /tmp/dhcpd.out
 echo
 
 echo '===> Show help (override default command)'
 docker run -it dhcpd --help | grep '^Usage: dhcpd'
+echo
+
+echo '===> Create config data container'
+docker run -it --name dhcpd-config.data config true
+echo
+
+echo '===> Create leases data container'
+docker run -it --name dhcpd-leases.data leases true
+echo
+
+echo '===> Check config and leases containers'
+docker run -it \
+  --volumes-from dhcpd-config.data \
+  --volumes-from dhcpd-leases.data \
+  dhcpd | tee /tmp/dhcpd.out
+echo
+grep 'Config file: /etc/dhcp/dhcpd.conf' /tmp/dhcpd.out
+echo
+grep 'Database file: /var/lib/dhcp/dhcpd.leases' /tmp/dhcpd.out
+echo
+echo -n 'Config file exists: '
+docker run -it \
+  --volumes-from dhcpd-config.data \
+  --volumes-from dhcpd-leases.data \
+  --entrypoint /bin/sh \
+  dhcpd -c "test -s /etc/dhcp/dhcpd.conf" \
+  && echo OK || { echo; exit 1; }
+echo
+echo -n 'Leases file exists: '
+docker run -it \
+  --volumes-from dhcpd-config.data \
+  --volumes-from dhcpd-leases.data \
+  --entrypoint /bin/sh \
+  dhcpd -c "test -r /var/lib/dhcp/dhcpd.leases" \
+  && echo OK || { echo; exit 1; }
 echo
 
 # If we make it this far, all previous commands passed.

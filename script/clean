@@ -1,3 +1,11 @@
 #!/bin/sh
 
+# Do not run on CircleCI.
+[ -n "${ci}" ] && exit 0
+
+docker rm -f dhcpd-config.data
+docker rm -f dhcpd-leases.data
+
+docker rmi config
 docker rmi dhcpd
+docker rmi leases

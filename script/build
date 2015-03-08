@@ -3,7 +3,9 @@ set -e
 set -x
 
 images="
+  config
   dhcpd
+  leases
 "
 for img in $images; do
   docker build -t $img $img/
